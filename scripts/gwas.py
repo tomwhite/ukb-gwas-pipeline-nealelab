@@ -455,6 +455,13 @@ def run_gwas(
     # See: https://github.com/pystatgen/sgkit/issues/390
     ds["call_dosage"] = ds["call_dosage"].chunk(chunks=(652, 5792))
 
+
+    logger.info(f"Checkpointing dataset:\n{ds}")
+
+    path = "/tmp/gwas.zarr"
+    sg.save_dataset(ds, path)
+    ds = sg.load_dataset(path)
+
     logger.info(f"Loaded dataset:\n{ds}")
 
     # Determine the UKB field ids corresponding to all phenotypes to be used
