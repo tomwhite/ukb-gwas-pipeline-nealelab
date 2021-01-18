@@ -455,6 +455,7 @@ def run_gwas(
     # See: https://github.com/pystatgen/sgkit/issues/390
     ds["call_dosage"] = ds["call_dosage"].chunk(chunks=(652, 5792))
 
+    ds["sample_trait"] = ds["sample_trait"].chunk(chunks=(167692, 100))
 
     logger.info(f"Checkpointing dataset:\n{ds}")
 
