@@ -38,6 +38,7 @@ def init(n_workers=1, threads_per_worker=None):
     # workers_kwargs = {"memory_target_fraction": False,
     #                   "memory_spill_fraction": False,
     #                   "memory_pause_fraction": .9}
+    workers_kwargs = {}
     client = Client(n_workers=n_workers,
                   threads_per_worker=threads_per_worker,
                   **workers_kwargs)
