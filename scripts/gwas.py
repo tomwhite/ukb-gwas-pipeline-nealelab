@@ -27,20 +27,27 @@ logger = logging.getLogger(__name__)
 fs = fsspec.filesystem("gs")
 
 
-def init():
+def init(n_workers=1, threads_per_worker=None):
     # Set this globally to avoid constant warnings like:
     # PerformanceWarning: Slicing is producing a large chunk. To accept the large chunk and silence this warning, set the option
     # >>> with dask.config.set(**{'array.slicing.split_large_chunks': False})
     dask.config.set(**{"array.slicing.split_large_chunks": False})
     ProgressBar().register()
-    if "DASK_SCHEDULER_ADDRESS" in os.environ:
-        client = Client()
-        logger.info(f"Initialized script with dask client:\n{client}")
-    else:
-        logger.info(
-            "Skipping initialization of distributed scheduler "
-            "(no `DASK_SCHEDULER_ADDRESS` found in env)"
-        )
+
+    # dask.config.set({"distributed.worker.memory.terminate": False})
+    # workers_kwargs = {"memory_target_fraction": False,
+    #                   "memory_spill_fraction": False,
+    #                   "memory_pause_fraction": .9}
+    client = Client(n_workers=n_workers,
+                  threads_per_worker=threads_per_worker,
+                  **workers_kwargs)
+
+    logger.info(f"Initialized script with dask client:\n{client}")
+    # else:
+    #     logger.info(
+    #         "Skipping initialization of distributed scheduler "
+    #         "(no `DASK_SCHEDULER_ADDRESS` found in env)"
+    #     )
 
 
 def add_protocol(url, protocol="gs"):
@@ -510,7 +517,7 @@ def run_gwas(
     ds = ds.chunk("auto")
     path = variables_path + "_variables.zarr"
     logger.info(f"Saving GWAS variables to {path}:\n{ds}")
-    save_dataset(ds, path)
+    #save_dataset(ds, path)
 
     logger.info("Done")
 
