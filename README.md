@@ -17,13 +17,60 @@ The development VM should be used to issue snakemake commands and will run some 
 
 ## Setup
 
-- Create an `n1-standard-8` GCE instance w/ Debian 10 (buster) OS
-- Install NTP (so time is correct after pausing VM):
-
-```bash
-sudo apt-get install -y ntp
+- Check out this repo on your local machine.
+- Create a `.env` file in the base of the checked-out repo. It contains more sensitive variable settings and a prototype for this file is shown here:
 ```
-- [Install conda](https://docs.conda.io/projects/conda/en/latest/user-guide/install/linux.html)
+export GCP_PROJECT=uk-biobank-XXXXX
+export GCP_REGION=us-east1
+export GCP_ZONE=us-east1-c
+export GCS_BUCKET=my-ukb-bucket-name # A single bucket is required for all operations
+export GCP_USER_EMAIL=me@company.com # GCP user to be used in ACLs
+export UKB_APP_ID=XXXXX      # UK Biobank application id
+export GCE_WORK_HOST=ukb-dev # Hostname given to development VM
+```
+- Create an `n1-standard-8` GCE instance w/ Debian 10 (buster) OS with 1000GB disk, and full access to all Cloud APIs. You can do this manually through the web console, or by running a command like the following:
+```bash
+source .env
+gcloud beta compute --project=$GCP_PROJECT instances create $GCE_WORK_HOST \
+    --zone=$GCP_ZONE \
+    --machine-type=n1-standard-8 \
+    --subnet=default \
+    --network-tier=PREMIUM \
+    --maintenance-policy=MIGRATE \
+    --service-account=$GCP_USER_EMAIL \
+    --scopes=https://www.googleapis.com/auth/cloud-platform \
+    --image=debian-10-buster-v20210217 \
+    --image-project=debian-cloud \
+    --boot-disk-size=1000GB \
+    --boot-disk-type=pd-standard \
+    --boot-disk-device-name=$GCE_WORK_HOST \
+    --no-shielded-secure-boot \
+    --shielded-vtpm \
+    --shielded-integrity-monitoring \
+    --reservation-affinity=any
+```
+- When the development VM is running, connect to it with
+```bash
+gcloud beta compute ssh --zone $GCP_ZONE $GCE_WORK_HOST
+```
+- Install required software
+```bash
+sudo apt-get update && sudo apt-get install -y git ntp wget
+# https://docs.anaconda.com/anaconda/install/silent-mode/#linux-macos
+wget https://repo.anaconda.com/miniconda/Miniconda3-latest-Linux-x86_64.sh -O ~/miniconda.sh
+bash ~/miniconda.sh -b -p $HOME/miniconda
+~/miniconda/bin/conda init bash
+exec bash
+```
+- Clone this repo
+```bash
+git clone https://github.com/related-sciences/ukb-gwas-pipeline-nealelab && cd ukb-gwas-pipeline-nealelab
+```
+- Install `.env` (run from local machine)
+```bash
+source .env
+gcloud beta compute scp --zone $GCP_ZONE .env "$GCE_WORK_HOST:ukb-gwas-pipeline-nealelab/.env"
+```
 - Initialize the `snakemake` environment, which will provide the CLI from which most other commands will be run:
 
 ```bash
@@ -37,20 +84,6 @@ Notes:
 - This will be mentioned frequently in the steps that follow, but it will be assumed when not stated otherwise
 that all commands are run from the root of this repo and that the `.env` as well as `env.sh` files have both been sourced.
 - Commands will often activated a conda environment first and where not stated otherwise, these environments can be generated using the definitions in [envs](envs).
-
-The `.env` file contains more sensitive variable settings and a prototype for this file is shown here:
-
-```
-export GCP_PROJECT=uk-biobank-XXXXX
-export GCP_REGION=us-east1
-export GCP_ZONE=us-east1-c
-export GCS_BUCKET=my-ukb-bucket-name # A single bucket is required for all operations
-export GCP_USER_EMAIL=me@company.com # GCP user to be used in ACLs
-export UKB_APP_ID=XXXXX      # UK Biobank application id
-export GCE_WORK_HOST=ukb-dev # Hostname given to development VM
-```
-
-You will have to create this file and populate the variable contents yourself.
 
 ## Cluster Management
 
@@ -141,6 +174,7 @@ gcloud compute instance-groups managed delete-instances gke-ukb-io-1-default-poo
 These commands show how to create a Dask cluster either for experimentation or for running steps in this pipeline:
 
 ```bash
+gcloud auth login # authenticate
 conda env create -f envs/cloudprovider.yaml 
 conda activate cloudprovider
 
@@ -148,7 +182,7 @@ source env.sh; source .env
 source config/dask/cloudprovider.sh
 python scripts/cluster/cloudprovider.py -- --interactive
 
->>> create(n_workers=1)
+>>> create(n_workers=1, env_var_file='config/dask/env_vars.json', security=False)
 Launching cluster with the following configuration:
   Source Image: projects/ubuntu-os-cloud/global/images/ubuntu-minimal-1804-bionic-v20201014
   Docker Image: daskdev/dask:latest

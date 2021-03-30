@@ -441,11 +441,10 @@ def run_gwas(
     # TypeError: array type float16 is unsupported in linalg
     ds["call_dosage"] = ds["call_dosage"].astype("float32")
 
-    # Rechunk dosage (from 5216 x 5792 @ TOW) down to something smaller in the
-    # variants dimension since variant_chunk x n_sample arrays need to
-    # fit in memory for linear regression (652 * 365941 * 4 = 954MB)
-    # See: https://github.com/pystatgen/sgkit/issues/390
-    ds["call_dosage"] = ds["call_dosage"].chunk(chunks=(652, 5792))
+    # Rechunk dosage so it's not chunked in the samples dimension, and with only a small number of
+    # variants in each chunk
+    # See: https://github.com/pystatgen/sgkit/issues/390 and https://github.com/pystatgen/sgkit/issues/448
+    ds["call_dosage"] = ds["call_dosage"].chunk(chunks=(64, -1))
 
     logger.info(f"Loaded dataset:\n{ds}")
 

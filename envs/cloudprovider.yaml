@@ -5,10 +5,9 @@ channels:
 dependencies:
     - python=3.8
     - ipython=7.19
-    - dask==2.30.0
-    - fire==0.3.1
+    - dask==2021.3.1
+    - fire==0.4.0
+    - cryptography==3.4.7
     - pip
     - pip:
-        # - git+https://github.com/eric-czech/dask-cloudprovider.git@f1df120531f161a6620bf8ba4ae6580fa58a745d#egg=dask-cloudprovider[gcp]
-        - git+https://github.com/eric-czech/dask-cloudprovider.git@21da278c1a89780d3a0b8919464a97a79d1ba737#egg=dask-cloudprovider[gcp]
-        
+        - dask-cloudprovider[gcp]==2021.3.1
